@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\ucos II-windows-20201023",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2",
+    "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2\\VS"
+  ],
+  "SelectedNode": "\\ucos II-windows-20201023\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2\\VS\\OS2.sln",
+  "PreviewInSolutionExplorer": false
+}

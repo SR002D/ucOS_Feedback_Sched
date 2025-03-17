@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\Micrium_Win32_Kernel",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\BSP",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\BSP\\Windows",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2",
+    "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2\\VS"
+  ],
+  "SelectedNode": "\\Micrium_Win32_Kernel\\Micrium_Win32_Kernel\\Microsoft\\Windows\\Kernel\\OS2\\VS\\OS2.sln",
+  "PreviewInSolutionExplorer": false
+}
