@@ -539,10 +539,9 @@ INT8U  OSTaskDel (INT8U prio)
 #endif
 
     OSTaskCtr--;                                        /* One less task being managed                 */
-    OSTCBPrioTbl[prio] = (OS_TCB *)0;                   /* Clear old priority entry                    */
     if (ptcb->OSTCBPrev == (OS_TCB *)0) {               /* Remove from TCB chain                       */
         ptcb->OSTCBNext->OSTCBPrev = (OS_TCB *)0;
-        OSTCBList                  = ptcb->OSTCBNext;
+        OSTCBPrioTbl[ptcb->OSTCBPrio] = ptcb->OSTCBNext;
     } else {
         ptcb->OSTCBPrev->OSTCBNext = ptcb->OSTCBNext;
         ptcb->OSTCBNext->OSTCBPrev = ptcb->OSTCBPrev;

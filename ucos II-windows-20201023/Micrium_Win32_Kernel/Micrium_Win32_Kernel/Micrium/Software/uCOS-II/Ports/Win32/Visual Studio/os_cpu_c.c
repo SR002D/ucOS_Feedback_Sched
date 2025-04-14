@@ -714,21 +714,29 @@ void  OSStartHighRdy (void)
 #endif
                                                                         /* Delete all created tasks/threads.                        */
     CPU_CRITICAL_ENTER();
-    p_tcb = OSTCBList;
-    while (p_tcb != (OS_TCB *)0) {
-        if (p_tcb != OS_TCB_RESERVED) {
-            prio = p_tcb->OSTCBPrio;
-            if (prio == OS_TASK_IDLE_PRIO) {
-                OSTaskDelHook(p_tcb);
-                p_tcb = p_tcb->OSTCBNext;
-            } else {
-                p_tcb = p_tcb->OSTCBNext;
-               (void)OSTaskDel(prio);
+    int i = 0;
+
+    for (i = 0;i < OS_TASK_IDLE_PRIO - 2;i++) {
+        p_tcb = OSTCBPrioTbl[i];
+
+        while (p_tcb != (OS_TCB*)0) {
+            if (p_tcb != OS_TCB_RESERVED) {
+                prio = p_tcb->OSTCBPrio;
+                if (prio == OS_TASK_IDLE_PRIO) {
+                    OSTaskDelHook(p_tcb);
+                    p_tcb = p_tcb->OSTCBNext;
+                }
+                else {
+                    p_tcb = p_tcb->OSTCBNext;
+                    (void)OSTaskDel(prio);
+                }
             }
-        } else {
-            p_tcb = p_tcb->OSTCBNext;
+            else {
+                p_tcb = p_tcb->OSTCBNext;
+            }
         }
     }
+    
     CPU_CRITICAL_EXIT();
 
     CPU_IntEnd();                                                       /* Delete Critical Section objects.                         */

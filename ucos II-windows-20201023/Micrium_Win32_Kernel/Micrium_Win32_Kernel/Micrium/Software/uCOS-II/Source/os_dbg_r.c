@@ -220,7 +220,6 @@ INT16U  const  OSDataSize = sizeof(OSCtxSwCtr)
                           + sizeof(OSTCBCur)
                           + sizeof(OSTCBFreeList)
                           + sizeof(OSTCBHighRdy)
-                          + sizeof(OSTCBList)
                           + sizeof(OSTCBPrioTbl)
                           + sizeof(OSTCBTbl);
 

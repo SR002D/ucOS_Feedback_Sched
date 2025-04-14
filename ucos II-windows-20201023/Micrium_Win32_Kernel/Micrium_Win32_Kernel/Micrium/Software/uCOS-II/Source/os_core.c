@@ -994,37 +994,42 @@ void  OSTimeTick (void)
 				//printf("\nTask %d work for 1 tick. Remained rest_c is %d.", OSTCBCur->OSTCBPrio, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 			}
 		}
-        ptcb = OSTCBList;                                  /* Point at first TCB in TCB list               */
-        while (ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO) {     /* Go through all TCBs in TCB list              */
-            OS_ENTER_CRITICAL();
-			//所有任务的rest_p都减一
-			if (ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO - 1&& ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO - 2) {
-				((tcb_ext_info*)ptcb->OSTCBExtPtr)->rest_p--;
-			}
-            if (ptcb->OSTCBDly != 0u) {                    /* No, Delayed or waiting for event with TO     */
-                ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
-                if (ptcb->OSTCBDly == 0u) {                /* Check for timeout                            */
-					//进入就绪态，重置rest_p
-					if (ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO - 1&& ptcb->OSTCBPrio != OS_TASK_IDLE_PRIO - 2) {
-						((tcb_ext_info*)ptcb->OSTCBExtPtr)->rest_p = ((tcb_ext_info*)ptcb->OSTCBExtPtr)->p;
-					}
-                    if ((ptcb->OSTCBStat & OS_STAT_PEND_ANY) != OS_STAT_RDY) {
-                        ptcb->OSTCBStat  &= (INT8U)~(INT8U)OS_STAT_PEND_ANY;   /* Yes, Clear status flag   */
-                        ptcb->OSTCBStatPend = OS_STAT_PEND_TO;                 /* Indicate PEND timeout    */
-                    } else {
-                        ptcb->OSTCBStatPend = OS_STAT_PEND_OK;
-                    }
 
-                    if ((ptcb->OSTCBStat & OS_STAT_SUSPEND) == OS_STAT_RDY) {  /* Is task suspended?       */
-                        OSRdyGrp               |= ptcb->OSTCBBitY;             /* No,  Make ready          */
-                        OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
-                        OS_TRACE_TASK_READY(ptcb);
+        int i = 0;
+        // 遍历所有任务
+        for (i = 0; i < OS_TASK_IDLE_PRIO - 2; i++) {
+            ptcb = OSTCBPrioTbl[i];
+            while (ptcb != (OS_TCB*)0) {
+                //所有任务的rest_p都减一
+                ((tcb_ext_info*)ptcb->OSTCBExtPtr)->rest_p--;
+
+                if (ptcb->OSTCBDly != 0u) {                    /* No, Delayed or waiting for event with TO     */
+                    ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
+                    if (ptcb->OSTCBDly == 0u) {                /* Check for timeout                            */
+                        //进入就绪态，重置rest_p
+                        ((tcb_ext_info*)ptcb->OSTCBExtPtr)->rest_p = ((tcb_ext_info*)ptcb->OSTCBExtPtr)->p;
+                  
+                        if ((ptcb->OSTCBStat & OS_STAT_PEND_ANY) != OS_STAT_RDY) {
+                            ptcb->OSTCBStat &= (INT8U)~(INT8U)OS_STAT_PEND_ANY;   /* Yes, Clear status flag   */
+                            ptcb->OSTCBStatPend = OS_STAT_PEND_TO;                 /* Indicate PEND timeout    */
+                        }
+                        else {
+                            ptcb->OSTCBStatPend = OS_STAT_PEND_OK;
+                        }
+
+                        if ((ptcb->OSTCBStat & OS_STAT_SUSPEND) == OS_STAT_RDY) {  /* Is task suspended?       */
+                            OSRdyGrp |= ptcb->OSTCBBitY;             /* No,  Make ready          */
+                            OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
+                            OS_TRACE_TASK_READY(ptcb);
+                        }
                     }
                 }
+
+                ptcb = ptcb->OSTCBNext;                        /* Point at next TCB in TCB list                */
+                OS_EXIT_CRITICAL();
             }
-            ptcb = ptcb->OSTCBNext;                        /* Point at next TCB in TCB list                */
-            OS_EXIT_CRITICAL();
-        }
+
+        }  
     }
 }
 
@@ -1632,7 +1637,6 @@ static  void  OS_InitTCBList (void)
 #if OS_TASK_NAME_EN > 0u
     ptcb1->OSTCBTaskName    = (INT8U *)(void *)"?";              /* Unknown name                       */
 #endif
-    OSTCBList               = (OS_TCB *)0;                       /* TCB lists initializations          */
     OSTCBFreeList           = &OSTCBTbl[0];
 }
 
@@ -2278,12 +2282,7 @@ INT8U  OS_TCBInit (INT8U    prio,
 #endif
 
         OS_ENTER_CRITICAL();
-        ptcb->OSTCBNext = OSTCBList;                       /* Link into TCB chain                      */
-        //ptcb->OSTCBPrev = (OS_TCB *)0;
-        //if (OSTCBList != (OS_TCB *)0) {
-        //    OSTCBList->OSTCBPrev = ptcb;
-        //}
-        //OSTCBList               = ptcb;
+        
         OSRdyGrp               |= ptcb->OSTCBBitY;         /* Make task ready to run                   */
         OSRdyTbl[ptcb->OSTCBY] |= ptcb->OSTCBBitX;
         OSTaskCtr++;                                       /* Increment the #tasks counter             */
