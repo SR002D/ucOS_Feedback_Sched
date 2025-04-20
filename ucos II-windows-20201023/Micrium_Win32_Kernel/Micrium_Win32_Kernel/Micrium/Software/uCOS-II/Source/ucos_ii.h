@@ -1394,6 +1394,8 @@ INT8U         OS_TCBInit              (INT8U            prio,
 void          OSTmr_Init              (void);
 #endif
 
+void TaskAdd(OS_TCB* ptcb);
+
 
 /*
 *********************************************************************************************************

@@ -87,9 +87,9 @@ static  void  OS_InitTCBList(void);
 
 static  void  OS_SchedNew(void);
 
-static void Sched_RMS(void);
-static void Sched_EDF(void);
-static void Sched_NEW(void);
+static OS_TCB* Sched_RMS(OS_TCB* tcblist);
+static OS_TCB* Sched_EDF(OS_TCB* tcblist);
+static void Sched_NEW();
 /*
 *********************************************************************************************************
 *                        GET THE NAME OF A SEMAPHORE, MUTEX, MAILBOX or QUEUE
@@ -621,12 +621,15 @@ void  OSInit (void)
 #endif
 #endif
 
+    // 创建空闲任务
     OS_InitTaskIdle();                                           /* Create the Idle Task                     */
 #if OS_TASK_STAT_EN > 0u
+    // 都会调用
     OS_InitTaskStat();                                           /* Create the Statistic Task                */
 #endif
 
 #if OS_TMR_EN > 0u
+    // 也会调用
     OSTmr_Init();                                                /* Initialize the Timer Manager             */
 #endif
 
@@ -700,7 +703,7 @@ void  OSIntExit (void)
 #endif
 
 
-
+    printf("\nstart OSIntExit...");
     if (OSRunning == OS_TRUE) {
         OS_ENTER_CRITICAL();
         if (OSIntNesting > 0u) {                           /* Prevent OSIntNesting from wrapping       */
@@ -709,11 +712,11 @@ void  OSIntExit (void)
         if (OSIntNesting == 0u) {                          /* Reschedule only if all ISRs complete ... */
             if (OSLockNesting == 0u) {                     /* ... and not locked.                      */
 				OS_SchedNew();
-				if (OSPrioHighRdy != OSPrioCur && ((OSPrioCur<61 &&((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c!=0)||OSPrioCur>=61)) {          /* No Ctx Sw if current task is highest rdy */
-					//任务抢断
+                // 若优先级高，任务抢断
+				if (OSPrioHighRdy < OSPrioCur && ((OSPrioCur<61 &&((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c!=0)||OSPrioCur>=61)) {          /* No Ctx Sw if current task is highest rdy */
+					// 任务抢断
 					INT32U timestamp = OSTimeGet();
 					printf("\n%-10d Preempt\t%d\t%d", timestamp, OSTCBCur->OSTCBPrio, OSPrioHighRdy);
-					OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
 #if OS_TASK_PROFILE_EN > 0u
                     OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
 #endif
@@ -730,6 +733,20 @@ void  OSIntExit (void)
                 } else {
                     OS_TRACE_ISR_EXIT();
                 }
+
+                // 若是同一任务，打印continue
+                if (OSTCBHighRdy == OSTCBCur) {
+                    INT32U timestamp = OSTimeGet();
+                    printf("\n%-10d Continue\t%d\t%d", timestamp, OSTCBCur->OSTCBPrio, OSTCBCur->OSTCBPrio);
+                }
+                
+
+                // 若无待调度任务，显示空闲CPU
+                if (OSTCBHighRdy == (OS_TCB*)0) {
+                    INT32U timestamp = OSTimeGet();
+                    printf("\n%-10d CPUFree\t%d\t%d", timestamp, OSTCBCur->OSTCBPrio, OSTCBCur->OSTCBPrio);
+                }
+
             } else {
                 OS_TRACE_ISR_EXIT();
             }
@@ -877,9 +894,7 @@ void  OSStart (void)
     if (OSRunning == OS_FALSE) {
         OS_SchedNew();                               /* Find highest priority's task priority number   */
         OSPrioCur     = OSPrioHighRdy;
-        OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy]; /* Point to highest priority task ready to run    */
         // OSTCBHighRdy直接从sched时放入完整TCB，OSTCBPrioTbl为可重复TCB数组
-        OSTCBHighRdy  = OSTCBPrioTbl[OSPrioHighRdy]; /* Point to highest priority task ready to run    */
         OSTCBCur      = OSTCBHighRdy;
         OSStartHighRdy();                            /* Execute target specific code to start task     */
     }
@@ -997,6 +1012,7 @@ void  OSTimeTick (void)
 
         int i = 0;
         // 遍历所有任务
+        printf("\ntime tick");
         for (i = 0; i < OS_TASK_IDLE_PRIO - 2; i++) {
             ptcb = OSTCBPrioTbl[i];
             while (ptcb != (OS_TCB*)0) {
@@ -1496,6 +1512,8 @@ static  void  OS_InitTaskIdle (void)
 
 #if OS_TASK_CREATE_EXT_EN > 0u
     #if OS_STK_GROWTH == 1u
+    // 非周期、63优先级、空闲任务
+    tcb_ext_info task_info_array = {1,1,1,1,1,1,0};
     (void)OSTaskCreateExt(OS_TaskIdle,
                           (void *)0,                                 /* No arguments passed to OS_TaskIdle() */
                           &OSTaskIdleStk[OS_TASK_IDLE_STK_SIZE - 1u],/* Set Top-Of-Stack                     */
@@ -1503,7 +1521,7 @@ static  void  OS_InitTaskIdle (void)
                           OS_TASK_IDLE_ID,
                           &OSTaskIdleStk[0],                         /* Set Bottom-Of-Stack                  */
                           OS_TASK_IDLE_STK_SIZE,
-                          (void *)0,                                 /* No TCB extension                     */
+                          (void *)&task_info_array,                 
                           OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);/* Enable stack checking + clear stack  */
     #else
     (void)OSTaskCreateExt(OS_TaskIdle,
@@ -1729,13 +1747,12 @@ void  OS_Sched (void)
     OS_CPU_SR  cpu_sr = 0u;
 #endif
 
-
+    printf("\nstart OS_Sched...");
 
     OS_ENTER_CRITICAL();
     if (OSIntNesting == 0u) {                          /* Schedule only if all ISRs done and ...       */
         if (OSLockNesting == 0u) {                     /* ... scheduler is not locked                  */
             OS_SchedNew();
-			OSTCBHighRdy = OSTCBPrioTbl[OSPrioHighRdy];
             if (OSPrioHighRdy != OSPrioCur) {          /* No Ctx Sw if current task is highest rdy     */
 				//任务完成
 				INT32U timestamp = OSTimeGet();
@@ -1817,13 +1834,15 @@ void Sched_NEW() {
     OS_TCB* highptcb;
     INT32U i;
     tcb_ext_info* task_info;
+    ptcb = (OS_TCB*)0;
 
     //初始化默认为空闲任务
     OS_ENTER_CRITICAL();
     i = 0;//优先级最高
     OS_EXIT_CRITICAL();
 
-    for (i = 0;i < 63;i++) {
+    // 可以调度到空闲任务
+    for (i = 0;i <= OS_LOWEST_PRIO;i++) {
         // 按一级优先级顺序查找TCB
         if (OSTCBPrioTbl[i] != (OS_TCB*)0) {
             // 在二级优先级里找到优先级最高的
@@ -1840,9 +1859,18 @@ void Sched_NEW() {
 
         if (ptcb != (OS_TCB*)0) {
             // 已找到最高优先级任务
-
+            OSTCBHighRdy = ptcb;
+            OSPrioHighRdy = ptcb->OSTCBPrio;
             break;
         }
+    }
+
+    if (OSTCBPrioTbl[OS_LOWEST_PRIO] != (OS_TCB*)0) {
+        printf("\nos_lowest task is exist");
+    }
+
+    if (ptcb == (OS_TCB*)0) {
+        printf("\nno task is already...");
     }
 }
 
@@ -1858,6 +1886,7 @@ OS_TCB* Sched_RMS(OS_TCB* tcblist) {
 	min_p = 1000000;//MAX
     OS_TCB* highRdy;
 	OS_EXIT_CRITICAL();
+    highRdy = (OS_TCB*)0;
 
 	//开始遍历所有的TCB
 	while (ptcb != (OS_TCB*)0) {  
@@ -1885,6 +1914,9 @@ OS_TCB* Sched_EDF(OS_TCB* tcblist) {
 	INT32U min_ddl;
 	tcb_ext_info* task_info;
     OS_TCB* highRdy;
+    highRdy = (OS_TCB*)0;
+
+    //task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
 
 	//初始化默认为空闲任务
 	OS_ENTER_CRITICAL();
@@ -1918,6 +1950,7 @@ OS_TCB* Sched_FIFO(OS_TCB* tcblist) {
     INT32U min_ddl;
     tcb_ext_info* task_info;
     OS_TCB* highRdy;
+    highRdy = (OS_TCB*)0;
 
     //初始化默认为空闲任务
     OS_ENTER_CRITICAL();
@@ -2298,6 +2331,11 @@ static void TaskAdd(OS_TCB* ptcb) {
     tcb_ext_info* task_info;
 
     task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
+
+    // 测试
+    if (task_info == (tcb_ext_info*)0) {
+        return;
+    }
 
     // 若为周期函数
     if (task_info->t == 0) {
