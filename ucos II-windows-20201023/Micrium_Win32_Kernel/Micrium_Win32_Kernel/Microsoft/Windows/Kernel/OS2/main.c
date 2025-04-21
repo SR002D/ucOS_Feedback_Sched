@@ -90,7 +90,7 @@ int  main (void)
     CPU_Init();                                                 /* Initialize the uC/CPU services                       */
 
     OSInit();                                                   /* Initialize uC/OS-II                                  */
-	printf("Time       Event\tFrom\tTo");
+	printf("Time\tTask\tEvent\tFrom\tTo\n");
 	createTasks();
 
 #if OS_TASK_NAME_EN > 0u
@@ -167,7 +167,7 @@ void createTasks() {
 		(void *)&task_info_array[1],
 		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
 	
-	OSTaskCreateExt(NoCycleTask3,
+	/*OSTaskCreateExt(NoCycleTask3,
 		(void *)0,
 		(OS_STK *)&Task3Stk[TASK_STK_SIZE - 1],
 		task_info_array[2].p,
@@ -175,7 +175,7 @@ void createTasks() {
 		(OS_STK *)&Task3Stk[0],
 		TASK_STK_SIZE,
 		(void *)&task_info_array[2],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
 	/*OSTCBCur = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];
 	OSTCBHighRdy = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];*/
 }
@@ -186,21 +186,18 @@ void CycleTask1(void *pdata) {
 		while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
 		{
 			// do nothing
-			//printf("\ncycle task 1 is running, rest_c is %d", ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 		}
 		                                  
-		OS_ENTER_CRITICAL();
 
 		// rest_c = 0 ,任务完成
 		/*INT32U timestamp = OSTimeGet();
 		printf("\n%-10d Complete\t%d\t%d", timestamp, OSTCBCur->OSTCBPrio, OSPrioHighRdy);*/
 
 		tcb_ext_info *task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
-		//printf("\ncycle task 1 delay for %d ticks.", task_info->rest_p);
+		
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
-		//printf("\ncycle task 1 set rest_c to %d", ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c);
-		OS_EXIT_CRITICAL();
+		
 		OSTimeDly(task_info->rest_p);
 	}
 }
