@@ -702,8 +702,9 @@ void  OSIntExit (void)
     OS_CPU_SR  cpu_sr = 0u;
 #endif
 
-
+    // 进入中断，可能是时钟tick了，代表一个时间片已经过去；也可能是新任务到来、当前任务结束等
     printf("start OSIntExit...\n");
+
     if (OSRunning == OS_TRUE) {
         OS_ENTER_CRITICAL();
         if (OSIntNesting > 0u) {                           /* Prevent OSIntNesting from wrapping       */
@@ -711,12 +712,19 @@ void  OSIntExit (void)
         }
         if (OSIntNesting == 0u) {                          /* Reschedule only if all ISRs complete ... */
             if (OSLockNesting == 0u) {                     /* ... and not locked.                      */
-				OS_SchedNew();
-                // 若优先级高，任务抢断
-				if (OSPrioHighRdy < OSPrioCur && ((OSPrioCur<61 &&((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c!=0)||OSPrioCur>=61)) {          /* No Ctx Sw if current task is highest rdy */
+				OS_SchedNew(); 
+                printf("after scheed_new OSTCBCur=%d\n", OSTCBCur->OSTCBId);
+                // 新调度优先级更高(或相同优先级，新调度的不是cur)，则被任务抢断
+				if (OSPrioHighRdy < OSPrioCur || (OSPrioHighRdy == OSPrioCur && OSTCBHighRdy != OSTCBCur)) {          /* No Ctx Sw if current task is highest rdy */
 					// 任务抢断
 					INT32U timestamp = OSTimeGet();
-					printf("%-10d\t%d\tPreempt\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                    // 被抢占的任务rest_c==0，说明任务完成
+                    if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c == 0) {
+                        printf("%-10d\t%d\tPreempt And Task Complete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                    }
+                    else {
+                        printf("%-10d\t%d\tPreempt\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                    }
 #if OS_TASK_PROFILE_EN > 0u
                     OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
 #endif
@@ -732,11 +740,19 @@ void  OSIntExit (void)
                     OSIntCtxSw();                          /* Perform interrupt level ctx switch       */ 
                 } 
                 else if (OSTCBHighRdy == OSTCBCur) {
-                    // 若是同一任务，打印continue
+                    // 调度任务为当前任务； continue
                     INT32U timestamp = OSTimeGet();
                     printf("%-10d\t%d\tContinue\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
                 }
+                else if (OSPrioHighRdy > OSPrioCur && OSPrioHighRdy<61) {
+                    // 调度任务为新任务，但优先级低，则上个任务完成
+                    INT32U timestamp = OSTimeGet();
+                    printf("%-10d\t%d\tNewTask\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                }
                 else {
+                    // 调度任务为空闲任务
+                    /*INT32U timestamp = OSTimeGet();
+                    printf("%-10d\t%d\tOSIntExit_Err\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);*/
                     OS_TRACE_ISR_EXIT();
                 }
                 
@@ -1006,6 +1022,12 @@ void  OSTimeTick (void)
 		if (OSTCBCur->OSTCBPrio != OS_TASK_IDLE_PRIO) {
 			if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) {
 				((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c--;
+
+                // 减1后等于0，说明刚刚完成任务
+                /*if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c == 0) {
+                    INT32U timestamp = OSTimeGet();
+                    printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                }*/
 				//printf("\nTask %d work for 1 tick. Remained rest_c is %d.", OSTCBCur->OSTCBPrio, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 			}
 		}
@@ -1753,10 +1775,10 @@ void  OS_Sched (void)
     if (OSIntNesting == 0u) {                          /* Schedule only if all ISRs done and ...       */
         if (OSLockNesting == 0u) {                     /* ... scheduler is not locked                  */
             OS_SchedNew();
-            if (OSPrioHighRdy != OSPrioCur) {          /* No Ctx Sw if current task is highest rdy     */
-				//任务完成
-				INT32U timestamp = OSTimeGet();
-				printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp,OSTCBCur->OSTCBId, timestamp - 1 , timestamp);
+            // sched到当前running状态的任务，不执行啊
+            printf("OS_Sched, OSTCBCur id %d, sched task id %d\n", OSTCBCur->OSTCBId, OSTCBHighRdy->OSTCBId);
+            if (OSTCBCur != OSTCBHighRdy) {          /* No Ctx Sw if current task is highest rdy     */
+				
 #if OS_TASK_PROFILE_EN > 0u
                 OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task      */
 #endif
@@ -1859,6 +1881,8 @@ void Sched_NEW() {
 
         if (ptcb != (OS_TCB*)0) {
             // 已找到最高优先级任务
+            INT32U timestamp = OSTimeGet();
+            printf("already get id %d task for run\n", ptcb->OSTCBId);
             OSTCBHighRdy = ptcb;
             OSPrioHighRdy = ptcb->OSTCBPrio;
             break;
@@ -1876,19 +1900,20 @@ OS_TCB* Sched_RMS(OS_TCB* tcblist) {
 	ptcb = tcblist;   //从头开始遍历，找就绪态中优先级最高的，即周期最短的
 	INT32U min_p;
 	tcb_ext_info* task_info;
+    //OS_TASK_STK* task;
 
 	//初始化默认为空闲任务
-	OS_ENTER_CRITICAL();
 	min_p = 1000000;//MAX
     OS_TCB* highRdy;
-	OS_EXIT_CRITICAL();
     highRdy = (OS_TCB*)0;
 
 	//开始遍历所有的TCB
+    OS_ENTER_CRITICAL();
 	while (ptcb != (OS_TCB*)0) {  
-		OS_ENTER_CRITICAL();
-		//如果这个任务是就绪态的
-		if (ptcb->OSTCBDly == 0) {
+		
+		//如果这个任务是就绪态的，且任务状态不是running，避免二次调度到正在运行中的任务
+        //task = (OS_TASK_STK*)ptcb->OSTCBStkPtr;
+		if (ptcb->OSTCBDly == 0 ) {
 			task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
 			INT32U task_p = task_info->p;
 
@@ -1899,8 +1924,8 @@ OS_TCB* Sched_RMS(OS_TCB* tcblist) {
 			}
 		}
 		ptcb = ptcb->OSTCBNext;
-		OS_EXIT_CRITICAL();
 	}
+    OS_EXIT_CRITICAL();
     return highRdy;
 }
 

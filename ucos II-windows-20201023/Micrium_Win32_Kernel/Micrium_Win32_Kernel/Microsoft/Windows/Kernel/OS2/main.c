@@ -157,15 +157,15 @@ void createTasks() {
 		TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
 		(void *)&task_info_array[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
 		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
-	/*OSTaskCreateExt(CycleTask2,
+	OSTaskCreateExt(CycleTask2,
 		(void *)0,
 		(OS_STK *)&Task2Stk[TASK_STK_SIZE - 1],
 		task_info_array[1].p,
-		task_info_array[1].p,
+		2,
 		(OS_STK *)&Task2Stk[0],
 		TASK_STK_SIZE,
 		(void *)&task_info_array[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	
 	/*OSTaskCreateExt(NoCycleTask3,
 		(void *)0,
@@ -187,18 +187,16 @@ void CycleTask1(void *pdata) {
 		{
 			// do nothing
 		}
-		                                  
-
-		// rest_c = 0 ,任务完成
-		/*INT32U timestamp = OSTimeGet();
-		printf("\n%-10d Complete\t%d\t%d", timestamp, OSTCBCur->OSTCBPrio, OSPrioHighRdy);*/
-
+		OS_ENTER_CRITICAL();
 		tcb_ext_info *task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
 		
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
-		
+		INT32U timestamp = OSTimeGet();
+		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+
 		OSTimeDly(task_info->rest_p);
+		OS_EXIT_CRITICAL();
 	}
 }
 
@@ -208,16 +206,15 @@ void CycleTask2(void *pdata) {
 		while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
 		{
 			// do nothing
-			//printf("\ncycle task 1 is running, rest_c is %d", ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 		}
 
-		OS_ENTER_CRITICAL();
 		tcb_ext_info* task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
-		printf("\ncycle task 2 delay for %d ticks.", task_info->rest_p);
+	
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
-		printf("\ncycle task 2 set rest_c to %d", ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c);
-		OS_EXIT_CRITICAL();
+		INT32U timestamp = OSTimeGet();
+		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+
 		OSTimeDly(task_info->rest_p);
 	}
 }
