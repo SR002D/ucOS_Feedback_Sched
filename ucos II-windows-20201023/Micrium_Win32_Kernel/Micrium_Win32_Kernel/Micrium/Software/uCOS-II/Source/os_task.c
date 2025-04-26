@@ -447,12 +447,11 @@ INT8U  OSTaskCreateExt (void   (*task)(void *p_arg),
 */
 
 #if OS_TASK_DEL_EN > 0u
-INT8U  OSTaskDel (INT8U prio)
+INT8U  OSTaskDel (OS_TCB* ptcb)
 {
 #if (OS_FLAG_EN > 0u) && (OS_MAX_FLAGS > 0u)
     OS_FLAG_NODE *pnode;
 #endif
-    OS_TCB       *ptcb;
 #if OS_CRITICAL_METHOD == 3u                            /* Allocate storage for CPU status register    */
     OS_CPU_SR     cpu_sr = 0u;
 #endif
@@ -466,29 +465,30 @@ INT8U  OSTaskDel (INT8U prio)
     }
 #endif
 
+    if (ptcb == (OS_TCB*)0) {                          /* Task to delete must exist                   */
+        OS_EXIT_CRITICAL();
+        return (OS_ERR_TASK_NOT_EXIST);
+    }
+
     if (OSIntNesting > 0u) {                            /* See if trying to delete from ISR            */
         return (OS_ERR_TASK_DEL_ISR);
     }
-    if (prio == OS_TASK_IDLE_PRIO) {                    /* Not allowed to delete idle task             */
+    if (ptcb->OSTCBPrio == OS_TASK_IDLE_PRIO) {                    /* Not allowed to delete idle task             */
         return (OS_ERR_TASK_DEL_IDLE);
     }
 #if OS_ARG_CHK_EN > 0u
-    if (prio >= OS_LOWEST_PRIO) {                       /* Task priority valid ?                       */
-        if (prio != OS_PRIO_SELF) {
+    if (ptcb->OSTCBPrio >= OS_LOWEST_PRIO) {                       /* Task priority valid ?                       */
+        if (ptcb->OSTCBPrio != OS_PRIO_SELF) {
             return (OS_ERR_PRIO_INVALID);
         }
     }
 #endif
 
     OS_ENTER_CRITICAL();
-    if (prio == OS_PRIO_SELF) {                         /* See if requesting to delete self            */
-        prio = OSTCBCur->OSTCBPrio;                     /* Set priority to delete to current           */
+    if (ptcb->OSTCBPrio == OS_PRIO_SELF) {                         /* See if requesting to delete self            */
+        ptcb->OSTCBPrio = OSTCBCur->OSTCBPrio;                     /* Set priority to delete to current           */
     }
-    ptcb = OSTCBPrioTbl[prio];
-    if (ptcb == (OS_TCB *)0) {                          /* Task to delete must exist                   */
-        OS_EXIT_CRITICAL();
-        return (OS_ERR_TASK_NOT_EXIST);
-    }
+    
     if (ptcb == OS_TCB_RESERVED) {                      /* Must not be assigned to Mutex               */
         OS_EXIT_CRITICAL();
         return (OS_ERR_TASK_DEL);
@@ -539,13 +539,30 @@ INT8U  OSTaskDel (INT8U prio)
 #endif
 
     OSTaskCtr--;                                        /* One less task being managed                 */
-    if (ptcb->OSTCBPrev == (OS_TCB *)0) {               /* Remove from TCB chain                       */
-        ptcb->OSTCBNext->OSTCBPrev = (OS_TCB *)0;
+
+    // 前后都为空，直接删除
+    if (ptcb->OSTCBPrev == (OS_TCB*)0 && ptcb->OSTCBNext == (OS_TCB*)0) {
+        OSTCBPrioTbl[ptcb->OSTCBPrio] = (OS_TCB*)0;
+    }
+    else if (ptcb->OSTCBPrev == (OS_TCB*)0 && ptcb->OSTCBNext != (OS_TCB*)0) {
+        // 前空后不空
         OSTCBPrioTbl[ptcb->OSTCBPrio] = ptcb->OSTCBNext;
-    } else {
+        ptcb->OSTCBNext->OSTCBPrev = (OS_TCB*)0;
+        ptcb->OSTCBNext = (OS_TCB*)0;
+    }
+    else if (ptcb->OSTCBPrev != (OS_TCB*)0 && ptcb->OSTCBNext == (OS_TCB*)0) {
+        // 前不空后空
+        ptcb->OSTCBPrev->OSTCBNext = (OS_TCB*)0;
+        ptcb->OSTCBPrev = (OS_TCB*)0;
+    }
+    else if (ptcb->OSTCBPrev != (OS_TCB*)0 && ptcb->OSTCBNext != (OS_TCB*)0) {
+        // 前后都不为空
         ptcb->OSTCBPrev->OSTCBNext = ptcb->OSTCBNext;
         ptcb->OSTCBNext->OSTCBPrev = ptcb->OSTCBPrev;
+        ptcb->OSTCBPrev = (OS_TCB*)0;
+        ptcb->OSTCBNext = (OS_TCB*)0;
     }
+
     ptcb->OSTCBNext     = OSTCBFreeList;                /* Return TCB to free TCB list                 */
     OSTCBFreeList       = ptcb;
 #if OS_TASK_NAME_EN > 0u

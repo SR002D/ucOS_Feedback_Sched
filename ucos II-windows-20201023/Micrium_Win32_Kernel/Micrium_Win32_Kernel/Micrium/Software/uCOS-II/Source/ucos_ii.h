@@ -1168,7 +1168,7 @@ INT8U         OSTaskCreateExt         (void           (*task)(void *p_arg),
 #endif
 
 #if OS_TASK_DEL_EN > 0u
-INT8U         OSTaskDel               (INT8U            prio);
+INT8U         OSTaskDel               (OS_TCB*            ptcb);
 INT8U         OSTaskDelReq            (INT8U            prio);
 #endif
 

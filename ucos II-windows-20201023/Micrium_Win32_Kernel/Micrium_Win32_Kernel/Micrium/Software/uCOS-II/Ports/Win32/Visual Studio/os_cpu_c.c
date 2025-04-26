@@ -728,7 +728,7 @@ void  OSStartHighRdy (void)
                 }
                 else {
                     p_tcb = p_tcb->OSTCBNext;
-                    (void)OSTaskDel(prio);
+                    (void)OSTaskDel(p_tcb);
                 }
             }
             else {
@@ -1250,7 +1250,7 @@ static  DWORD  WINAPI  OSTaskW32 (LPVOID  p_arg)
 
     p_stk->Task(p_stk->TaskArgPtr);
 
-    OSTaskDel(p_tcb->OSTCBPrio);                                        /* Thread may exit at OSCtxSw().                            */
+    OSTaskDel(p_tcb);                                        /* Thread may exit at OSCtxSw().                            */
 
     return (0u);
 }
@@ -1276,7 +1276,7 @@ static  void  OSTaskTerminate (OS_TASK_STK  *p_stk)
 
 #if (OS_MSG_TRACE > 0u)
     p_tcb = p_stk->OSTCBPtr;
-    OS_Printf("Task[%3.1d] '%s' Deleted\n", p_tcb->OSTCBPrio, p_tcb->OSTCBTaskName);
+    OS_Printf("Task[%3.1d] Deleted\n", p_tcb->OSTCBId);
 #endif
     CloseHandle(p_stk->InitSignalPtr);
     CloseHandle(p_stk->SignalPtr);
