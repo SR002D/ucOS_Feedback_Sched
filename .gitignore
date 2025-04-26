@@ -1,2 +1,4 @@
 # 忽略运行文件夹
-\ucos II-windows-20201023\Micrium_Win32_Kernel\Micrium_Win32_Kernel\Microsoft\Windows\Kernel\OS2\VS
+/ucos II-windows-20201023/Micrium_Win32_Kernel/Micrium_Win32_Kernel/Microsoft/Windows/Kernel/OS2/VS/OS2/**
+/ucos II-windows-20201023/Micrium_Win32_Kernel/Micrium_Win32_Kernel/Microsoft/Windows/Kernel/OS2/VS/Debug/**
+/ucos II-windows-20201023/Micrium_Win32_Kernel/Micrium_Win32_Kernel/Microsoft/Windows/Kernel/OS2/VS/.vs/**
