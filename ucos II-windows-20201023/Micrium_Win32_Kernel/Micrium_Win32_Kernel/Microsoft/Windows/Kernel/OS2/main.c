@@ -155,30 +155,30 @@ static  void  StartupTask (void *p_arg)
 void createTasks() {
 	OS_EVENT* device = OSSemCreate(1); 
 	
-	//OSTaskCreateExt(CycleTask1,                //指向任务代码的指针
-	//	(void *)0,                         //Pdata指针指向一个数据结构，该结构用来在建立任务时向任务传递参数。
-	//	(OS_STK *)&Task1Stk[TASK_STK_SIZE - 1],//ptos为指向任务堆栈栈顶的指针。
-	//	task_info_array_cycle[0].p,             //prio为任务的一级优先级，需自行指定
-	//	1,          //id是任务的标识，不可与优先级相同
-	//	(OS_STK *)&Task1Stk[0],         //pbos为指向堆栈底端的指针。
-	//	TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
-	//	(void *)&task_info_array_cycle[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
-	//	OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
-	//OSTaskCreateExt(CycleTask2,
-	//	(void *)0,
-	//	(OS_STK *)&Task2Stk[TASK_STK_SIZE - 1],
-	//	task_info_array_cycle[1].p,
-	//	2,
-	//	(OS_STK *)&Task2Stk[0],
-	//	TASK_STK_SIZE,
-	//	(void *)&task_info_array_cycle[1],
-	//	OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+	OSTaskCreateExt(CycleTask1,                //指向任务代码的指针
+		(void *)0,                         //Pdata指针指向一个数据结构，该结构用来在建立任务时向任务传递参数。
+		(OS_STK *)&Task1Stk[TASK_STK_SIZE - 1],//ptos为指向任务堆栈栈顶的指针。
+		task_info_array_cycle[0].p,             //prio为任务的一级优先级，需自行指定
+		1,          //id是任务的标识，不可与优先级相同
+		(OS_STK *)&Task1Stk[0],         //pbos为指向堆栈底端的指针。
+		TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
+		(void *)&task_info_array_cycle[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
+	OSTaskCreateExt(CycleTask2,
+		(void *)0,
+		(OS_STK *)&Task2Stk[TASK_STK_SIZE - 1],
+		task_info_array_cycle[1].p,
+		2,
+		(OS_STK *)&Task2Stk[0],
+		TASK_STK_SIZE,
+		(void *)&task_info_array_cycle[1],
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	
 	OSTaskCreateExt(NoCycleTask1,
 		(void *)0,
 		(OS_STK *)&Task3Stk[TASK_STK_SIZE - 1],
 		task_info_array_nocycle[0].p,
-		1,
+		3,
 		(OS_STK *)&Task3Stk[0],
 		TASK_STK_SIZE,
 		(void *)&task_info_array_nocycle[0],
@@ -187,7 +187,7 @@ void createTasks() {
 		(void*)0,
 		(OS_STK*)&Task4Stk[TASK_STK_SIZE - 1],
 		task_info_array_nocycle[1].p,
-		2,
+		4,
 		(OS_STK*)&Task4Stk[1],
 		TASK_STK_SIZE,
 		(void*)&task_info_array_nocycle[1],
