@@ -37,11 +37,11 @@
 
 static  OS_STK  StartupTaskStk[APP_CFG_STARTUP_TASK_STK_SIZE];
 tcb_ext_info task_info_array_cycle[] = {
-	{0,0,1,4,1,4,0},{0,0,2,5,2,5,0}
+	{0,0,2,4,2,4,1,1,0},{0,0,3,6,3,6,1,1,0}
 };
 
 tcb_ext_info task_info_array_nocycle[] = {
-	{1,0,2,10,2,10,0}, {1,0,3,5,3,5,0}
+	{1,0,4,10,4,10,1,1,0}, {1,0,3,5,3,5,5,5,0}
 };
 OS_STK Task1Stk[TASK_STK_SIZE];
 OS_STK Task2Stk[TASK_STK_SIZE];
@@ -155,16 +155,16 @@ static  void  StartupTask (void *p_arg)
 void createTasks() {
 	OS_EVENT* device = OSSemCreate(1); 
 	
-	OSTaskCreateExt(CycleTask1,                //指向任务代码的指针
-		(void *)0,                         //Pdata指针指向一个数据结构，该结构用来在建立任务时向任务传递参数。
-		(OS_STK *)&Task1Stk[TASK_STK_SIZE - 1],//ptos为指向任务堆栈栈顶的指针。
-		task_info_array_cycle[0].p,             //prio为任务的一级优先级，需自行指定
-		1,          //id是任务的标识，不可与优先级相同
-		(OS_STK *)&Task1Stk[0],         //pbos为指向堆栈底端的指针。
-		TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
-		(void *)&task_info_array_cycle[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
-	OSTaskCreateExt(CycleTask2,
+	//OSTaskCreateExt(CycleTask1,                //指向任务代码的指针
+	//	(void *)0,                         //Pdata指针指向一个数据结构，该结构用来在建立任务时向任务传递参数。
+	//	(OS_STK *)&Task1Stk[TASK_STK_SIZE - 1],//ptos为指向任务堆栈栈顶的指针。
+	//	task_info_array_cycle[0].p,             //prio为任务的一级优先级，需自行指定
+	//	1,          //id是任务的标识，不可与优先级相同
+	//	(OS_STK *)&Task1Stk[0],         //pbos为指向堆栈底端的指针。
+	//	TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
+	//	(void *)&task_info_array_cycle[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
+	//	OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
+	/*OSTaskCreateExt(CycleTask2,
 		(void *)0,
 		(OS_STK *)&Task2Stk[TASK_STK_SIZE - 1],
 		task_info_array_cycle[1].p,
@@ -172,7 +172,8 @@ void createTasks() {
 		(OS_STK *)&Task2Stk[0],
 		TASK_STK_SIZE,
 		(void *)&task_info_array_cycle[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
+
 	
 	OSTaskCreateExt(NoCycleTask1,
 		(void *)0,
@@ -183,6 +184,7 @@ void createTasks() {
 		TASK_STK_SIZE,
 		(void *)&task_info_array_nocycle[0],
 		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+		/*
 	OSTaskCreateExt(NoCycleTask1,
 		(void*)0,
 		(OS_STK*)&Task4Stk[TASK_STK_SIZE - 1],
@@ -191,7 +193,7 @@ void createTasks() {
 		(OS_STK*)&Task4Stk[1],
 		TASK_STK_SIZE,
 		(void*)&task_info_array_nocycle[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
 	/*OSTCBCur = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];
 	OSTCBHighRdy = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];*/
 }
@@ -208,6 +210,8 @@ void CycleTask1(void *pdata) {
 		
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
+		//重置剩余时间片长度
+		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
 		INT32U timestamp = OSTimeGet();
 		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 
@@ -228,6 +232,8 @@ void CycleTask2(void *pdata) {
 	
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
+		//重置剩余时间片长度
+		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
 		INT32U timestamp = OSTimeGet();
 		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 

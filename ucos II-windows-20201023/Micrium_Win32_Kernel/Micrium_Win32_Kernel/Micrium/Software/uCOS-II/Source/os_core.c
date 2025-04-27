@@ -725,6 +725,9 @@ void  OSIntExit (void)
                     else {
                         printf("%-10d\t%d\tPreempt\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
                     }
+
+                    // 任务抢断时，重置当前任务剩余时间片长度
+                    ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
 #if OS_TASK_PROFILE_EN > 0u
                     OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
 #endif
@@ -1030,12 +1033,74 @@ void  OSTimeTick (void)
                 }*/
 				//printf("\nTask %d work for 1 tick. Remained rest_c is %d.", OSTCBCur->OSTCBPrio, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 			}
+            // 时间片运转完成，重置
+            if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr == 0) {
+                ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
+            }
+
+            if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr > 0) {
+                ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr--;
+                printf("Task %d has time %d can run, all time quanta is %d\n", 
+                    OSTCBCur->OSTCBId, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta);
+                // 时间片已用完且任务未完成，需要降级处理，且不超过二级优先级降级边界
+                if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr == 0 && 
+                    ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c >0 &&
+                    ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->pri <3) {
+                    // 先从当前优先级删除
+
+                    // 前后都为空，直接删除
+                    if (OSTCBCur->OSTCBPrev == (OS_TCB*)0 && OSTCBCur->OSTCBNext == (OS_TCB*)0) {
+                        OSTCBPrioTbl[OSTCBCur->OSTCBPrio] = (OS_TCB*)0;
+                    }
+                    else if (OSTCBCur->OSTCBPrev == (OS_TCB*)0 && OSTCBCur->OSTCBNext != (OS_TCB*)0) {
+                        // 前空后不空
+                        OSTCBPrioTbl[OSTCBCur->OSTCBPrio] = OSTCBCur->OSTCBNext;
+                        OSTCBCur->OSTCBNext->OSTCBPrev = (OS_TCB*)0;
+                        OSTCBCur->OSTCBNext = (OS_TCB*)0;
+                    }
+                    else if (OSTCBCur->OSTCBPrev != (OS_TCB*)0 && OSTCBCur->OSTCBNext == (OS_TCB*)0) {
+                        // 前不空后空
+                        OSTCBCur->OSTCBPrev->OSTCBNext = (OS_TCB*)0;
+                        OSTCBCur->OSTCBPrev = (OS_TCB*)0;
+                    }
+                    else if (OSTCBCur->OSTCBPrev != (OS_TCB*)0 && OSTCBCur->OSTCBNext != (OS_TCB*)0) {
+                        // 前后都不为空
+                        OSTCBCur->OSTCBPrev->OSTCBNext = OSTCBCur->OSTCBNext;
+                        OSTCBCur->OSTCBNext->OSTCBPrev = OSTCBCur->OSTCBPrev;
+                        OSTCBCur->OSTCBPrev = (OS_TCB*)0;
+                        OSTCBCur->OSTCBNext = (OS_TCB*)0;
+                    }
+
+                    // 再添加到-2的优先级中
+                    //OSPrioCur
+                    // 考虑优先级列表边界
+                    if (OSPrioCur <= OS_TASK_IDLE_PRIO - 4 ) {
+                        if (OSTCBPrioTbl[OSPrioCur + 2] == (OS_TCB*)0) {
+                            OSTCBPrioTbl[OSPrioCur + 2] = OSTCBCur;
+                        }
+                        else {
+                            OSTCBCur->OSTCBNext = OSTCBPrioTbl[OSPrioCur + 2];
+                            OSTCBPrioTbl[OSPrioCur + 2]->OSTCBPrev = OSTCBCur;
+                            OSTCBPrioTbl[OSPrioCur + 2] = OSTCBCur;
+                        }
+                        OSPrioCur = OSPrioCur + 2;
+                        // 二级优先级＋1
+                        ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->pri++;
+                        // 一级优先级+2
+                        OSTCBCur->OSTCBPrio += 2;
+                    }
+                    printf("Task %d used time quanta over, before pri is %d, after pri is %d\n", 
+                        OSTCBCur->OSTCBId, OSPrioCur -2, OSPrioCur);
+
+                    printf("Task %d twice pri is %d\n", OSTCBCur->OSTCBId, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->pri);
+                }
+            }
 		}
 
         int i = 0;
         // 遍历所有任务
         printf("time tick\n");
-        for (i = 0; i < OS_TASK_IDLE_PRIO - 2; i++) {
+        for (i = 0; i < OS_TASK_IDLE_PRIO - 2; i++) { // 排除了空闲任务和静态任务
             ptcb = OSTCBPrioTbl[i];
             while (ptcb != (OS_TCB*)0) {
                 //所有任务的rest_p都减一
@@ -1882,7 +1947,7 @@ void Sched_NEW() {
         if (ptcb != (OS_TCB*)0) {
             // 已找到最高优先级任务
             INT32U timestamp = OSTimeGet();
-            printf("already get id %d task for run\n", ptcb->OSTCBId);
+            printf("already get id %d task for run, pri=%d\n", ptcb->OSTCBId, i);
             OSTCBHighRdy = ptcb;
             OSPrioHighRdy = ptcb->OSTCBPrio;
             break;
