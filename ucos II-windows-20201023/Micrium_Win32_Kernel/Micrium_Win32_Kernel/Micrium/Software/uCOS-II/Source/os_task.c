@@ -540,6 +540,8 @@ INT8U  OSTaskDel (OS_TCB* ptcb)
 
     OSTaskCtr--;                                        /* One less task being managed                 */
 
+    printf("Task [%d] is del... \n", ptcb->OSTCBId);
+
     // 前后都为空，直接删除
     if (ptcb->OSTCBPrev == (OS_TCB*)0 && ptcb->OSTCBNext == (OS_TCB*)0) {
         OSTCBPrioTbl[ptcb->OSTCBPrio] = (OS_TCB*)0;

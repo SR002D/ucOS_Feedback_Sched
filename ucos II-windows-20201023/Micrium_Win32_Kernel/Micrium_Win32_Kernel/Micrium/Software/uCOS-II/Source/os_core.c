@@ -751,11 +751,40 @@ void  OSIntExit (void)
                     // 调度任务为新任务，但优先级低，则上个任务完成
                     INT32U timestamp = OSTimeGet();
                     printf("%-10d\t%d\tNewTask\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+
+#if OS_TASK_PROFILE_EN > 0u
+                    OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
+#endif
+                    OSCtxSwCtr++;                          /* Keep track of the number of ctx switches */
+
+#if OS_TASK_CREATE_EXT_EN > 0u
+#if defined(OS_TLS_TBL_SIZE) && (OS_TLS_TBL_SIZE > 0u)
+                    OS_TLS_TaskSw();
+#endif
+#endif
+                    OS_TRACE_ISR_EXIT_TO_SCHEDULER();
+
+                    OSIntCtxSw();                          /* Perform interrupt level ctx switch       */
                 }
                 else {
                     // 调度任务为空闲任务
                     /*INT32U timestamp = OSTimeGet();
                     printf("%-10d\t%d\tOSIntExit_Err\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);*/
+
+#if OS_TASK_PROFILE_EN > 0u
+                    OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
+#endif
+                    OSCtxSwCtr++;                          /* Keep track of the number of ctx switches */
+
+#if OS_TASK_CREATE_EXT_EN > 0u
+#if defined(OS_TLS_TBL_SIZE) && (OS_TLS_TBL_SIZE > 0u)
+                    OS_TLS_TaskSw();
+#endif
+#endif
+                    OS_TRACE_ISR_EXIT_TO_SCHEDULER();
+
+                    OSIntCtxSw();                          /* Perform interrupt level ctx switch       */
+
                     OS_TRACE_ISR_EXIT();
                 }
                 
@@ -2007,11 +2036,9 @@ OS_TCB* Sched_EDF(OS_TCB* tcblist) {
 	//初始化默认为空闲任务
 	OS_ENTER_CRITICAL();
 	min_ddl = 4294967295;//MAX
-	OS_EXIT_CRITICAL();
 
 	//开始遍历所有的TCB
 	while (ptcb != (OS_TCB*)0) {  //注意，除了63任务外，还有62、61任务
-		OS_ENTER_CRITICAL();
 		//如果这个任务是就绪态的
 		if (ptcb->OSTCBDly == 0) {
 			task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
@@ -2024,10 +2051,11 @@ OS_TCB* Sched_EDF(OS_TCB* tcblist) {
 			}
 		}
 		ptcb = ptcb->OSTCBNext;
-		OS_EXIT_CRITICAL();
 	}
 
     return highRdy;
+
+    OS_EXIT_CRITICAL();
 }
 
 OS_TCB* Sched_FIFO(OS_TCB* tcblist) {

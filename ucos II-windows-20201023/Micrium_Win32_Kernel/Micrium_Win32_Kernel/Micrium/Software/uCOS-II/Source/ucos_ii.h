@@ -644,7 +644,6 @@ typedef struct tcb_ext_info {
 	INT32U rest_p;       //一个周期中任务周期长度的剩余长度
     INT32U time_quanta; //任务的时间片大小
     INT32U time_quanta_ctr; //任务剩余时间片大小
-	OS_EVENT * resource;//任务需要请求的信号量的事件控制块指针
 }tcb_ext_info;
 
 /*

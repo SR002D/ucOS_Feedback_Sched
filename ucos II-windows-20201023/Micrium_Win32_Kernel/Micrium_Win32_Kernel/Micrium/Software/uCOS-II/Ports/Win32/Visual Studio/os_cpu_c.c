@@ -378,6 +378,8 @@ void  OSTaskDelHook (OS_TCB  *p_tcb)
 {
     OS_TASK_STK  *p_stk;
 
+    printf("start OSTaskDelHook, p_tcb %d\n", OSTCBCur->OSTCBId);
+
 
 #if (OS_APP_HOOKS_EN > 0u)
     App_TaskDelHook(p_tcb);
@@ -805,6 +807,10 @@ void  OSCtxSw (void)
     p_stk = (OS_TASK_STK *)OSTCBCur->OSTCBStkPtr;
 
     OSTaskSwHook();
+
+    printf("start OSCtxSw...\n");
+
+    printf("OSTCBCur[%d], OSTCBHighRdy[%d]\n", OSTCBCur->OSTCBId, OSTCBHighRdy->OSTCBId);
 
     OSTCBCur  = OSTCBHighRdy;
     OSPrioCur = OSPrioHighRdy;
