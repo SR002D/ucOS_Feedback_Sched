@@ -62,9 +62,9 @@ tcb_ext_info task_info_array_nocycle[] = {
 	{1, 0, 4, 8, 4, 8, 18, 18}     // 非周期任务20：运行时间4，截止日期8
 };
 
-//OS_STK Task2Stk[TASK_STK_SIZE];
-//OS_STK Task3Stk[TASK_STK_SIZE];
-//OS_STK Task4Stk[TASK_STK_SIZE];
+static int N = 20;
+static float P = 1.0;
+
 
 /*
 *********************************************************************************************************
@@ -76,15 +76,9 @@ static  void  StartupTask (void  *p_arg);
 
 static void createTasks();
 
-//static void startTasks(char *task_name);
-
 static void CycleTask(void* pdata);
 
-//static void CycleTask(void *pdata);
-
 static void NoCycleTask(void *pdata);
-
-static void NoCycleTask2(void* pdata);
 
 /*
 *********************************************************************************************************
@@ -172,8 +166,23 @@ static  void  StartupTask (void *p_arg)
 
 void createTasks() {
 	int i;
-	for (i = 0;i < 10;i++) {
+	for (i = 0;i < N/2;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
+		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
+
+
+		int num = Math_Rand()%20;	// 生成0-19的随机数
+
+		task_info_list->c = num;
+		task_info_list->p = N*num/P;
+
+		task_info_list->time_quanta = task_info_list->c;
+		task_info_list->t = 0;
+		task_info_list->pri = 0;
+		task_info_list->rest_c = task_info_list->c;
+		task_info_list->rest_p = task_info_list->p;
+		task_info_list->time_quanta_ctr = task_info_list->time_quanta;
+
 		OSTaskCreateExt(CycleTask,
 			(void*)0,
 			(OS_STK*)&TaskStk[TASK_STK_SIZE - 1],
@@ -181,12 +190,27 @@ void createTasks() {
 			i,
 			(OS_STK*)&TaskStk[0],
 			TASK_STK_SIZE,
-			(void*)&task_info_array_cycle[i],
+			(void*)task_info_list,
 			OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	}
 
-	for (i = 0;i < 10;i++) {
+
+	for (i = 0;i < N/2;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
+		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
+
+		int num = Math_Rand() % 20;	// 生成0-19的随机数
+
+		task_info_list->c = num;
+		task_info_list->p = N * num / P;
+
+		task_info_list->time_quanta = task_info_list->c;
+		task_info_list->t = 0;
+		task_info_list->pri = 0;
+		task_info_list->rest_c = task_info_list->c;
+		task_info_list->rest_p = task_info_list->p;
+		task_info_list->time_quanta_ctr = task_info_list->time_quanta;
+
 		OSTaskCreateExt(NoCycleTask,
 			(void*)0,
 			(OS_STK*)&TaskStk[TASK_STK_SIZE - 1],
@@ -194,64 +218,9 @@ void createTasks() {
 			i+10,
 			(OS_STK*)&TaskStk[0],
 			TASK_STK_SIZE,
-			(void*)&task_info_array_nocycle[i],
+			(void*)&task_info_list,
 			OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	}
-
-
-	/*OS_STK TaskStk1[TASK_STK_SIZE];
-	OSTaskCreateExt(NoCycleTask,
-		(void*)0,
-		(OS_STK*)&TaskStk1[TASK_STK_SIZE - 1],
-		4,
-		10,
-		(OS_STK*)&TaskStk1[0],
-		TASK_STK_SIZE,
-		(void*)&task_info_array_nocycle[0],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
-
-	OS_STK TaskStk2[TASK_STK_SIZE];
-	OSTaskCreateExt(NoCycleTask2,
-		(void*)0,
-		(OS_STK*)&TaskStk2[TASK_STK_SIZE - 1],
-		6,
-		11,
-		(OS_STK*)&TaskStk2[0],
-		TASK_STK_SIZE,
-		(void*)&task_info_array_nocycle[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
-	
-	//OSTaskCreateExt(CycleTask1,                //指向任务代码的指针
-	//	(void *)0,                         //Pdata指针指向一个数据结构，该结构用来在建立任务时向任务传递参数。
-	//	(OS_STK *)&Task1Stk[TASK_STK_SIZE - 1],//ptos为指向任务堆栈栈顶的指针。
-	//	task_info_array_cycle[0].p,             //prio为任务的一级优先级，需自行指定
-	//	1,          //id是任务的标识，不可与优先级相同
-	//	(OS_STK *)&Task1Stk[0],         //pbos为指向堆栈底端的指针。
-	//	TASK_STK_SIZE,                //stk_size 指定任务堆栈的大小。
-	//	(void *)&task_info_array_cycle[0],//pext是一个用户定义数据结构的指针，可作为TCB的扩展。
-	//	OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);//opt存放与任务相关的操作信息。是否检查任务堆栈，是否清空任务堆栈。
-	/*OSTaskCreateExt(CycleTask,
-		(void *)0,
-		(OS_STK *)&Task2Stk[TASK_STK_SIZE - 1],
-		task_info_array_cycle[1].p,
-		2,
-		(OS_STK *)&Task2Stk[0],
-		TASK_STK_SIZE,
-		(void *)&task_info_array_cycle[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
-	
-		/*
-	OSTaskCreateExt(NoCycleTask1,
-		(void*)0,
-		(OS_STK*)&Task4Stk[TASK_STK_SIZE - 1],
-		task_info_array_nocycle[1].p,
-		4,
-		(OS_STK*)&Task4Stk[1],
-		TASK_STK_SIZE,
-		(void*)&task_info_array_nocycle[1],
-		OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);*/
-	/*OSTCBCur = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];
-	OSTCBHighRdy = OSTCBPrioTbl[OS_TASK_IDLE_PRIO];*/
 }
 
 void CycleTask(void *pdata) {
@@ -263,39 +232,22 @@ void CycleTask(void *pdata) {
 		}
 		OS_ENTER_CRITICAL();
 		tcb_ext_info *task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
+
+		if (task_info->rest_p >= 0) {
+			OSTaskSuccCtr++; // 任务成功
+		}
 		
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
 		//重置剩余时间片长度
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
 		INT32U timestamp = OSTimeGet();
-		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+		printf("[Time]%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 
 		OSTimeDly(task_info->rest_p);
 		OS_EXIT_CRITICAL();
 	}   
 }
-
-//void CycleTask(void *pdata) {
-//	// 模拟周期任务，一直循环进行，一直未删除
-//	while (1) {
-//		while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
-//		{
-//			// do nothing
-//		}
-//
-//		tcb_ext_info* task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
-//	
-//		//重置任务完成时间
-//		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
-//		//重置剩余时间片长度
-//		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta;
-//		INT32U timestamp = OSTimeGet();
-//		printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
-//
-//		OSTimeDly(task_info->rest_p);
-//	}
-//}
 
 void NoCycleTask(void *pdata) {
 	printf("NoCycleTask id %d start run\n", OSTCBCur->OSTCBId);
@@ -303,35 +255,15 @@ void NoCycleTask(void *pdata) {
 	{
 		// do nothing
 	}
-	INT32U timestamp = OSTimeGet();
-	printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 
-	// 运行完成，删除该任务
-	OSTaskDel(OSTCBCur);
-}
-
-void NoCycleTask2(void* pdata) {
-	printf("NoCycleTask2 id %d start run\n", OSTCBCur->OSTCBId);
-	while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
-	{
-		// do nothing
+	tcb_ext_info* task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
+	if (task_info->rest_p >= 0) {
+		OSTaskSuccCtr++; // 任务成功
 	}
+
 	INT32U timestamp = OSTimeGet();
-	printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+	printf("[Time]%-10d\t%d\tComplete and Del\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 
 	// 运行完成，删除该任务
 	OSTaskDel(OSTCBCur);
 }
-
-//void NoCycleTask2(void* pdata) {
-//	printf("NoCycleTask2 start run\n");
-//	while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
-//	{
-//		// do nothing
-//	}
-//	INT32U timestamp = OSTimeGet();
-//	printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
-//
-//	// 运行完成，删除该任务
-//	OSTaskDel(OSTCBCur);
-//}

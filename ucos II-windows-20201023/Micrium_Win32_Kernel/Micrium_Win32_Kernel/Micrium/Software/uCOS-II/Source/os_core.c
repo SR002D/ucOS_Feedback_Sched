@@ -720,10 +720,10 @@ void  OSIntExit (void)
 					INT32U timestamp = OSTimeGet();
                     // 被抢占的任务rest_c==0，说明任务完成
                     if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c == 0) {
-                        printf("%-10d\t%d\tPreempt And Task Complete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                        printf("[Time]%-10d\t%d\tPreempt And Task Complete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
                     }
                     else {
-                        printf("%-10d\t%d\tPreempt\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                        printf("[Time]%-10d\t%d\tPreempt\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
                     }
 
                     // 任务抢断时，重置当前任务剩余时间片长度
@@ -745,12 +745,12 @@ void  OSIntExit (void)
                 else if (OSTCBHighRdy == OSTCBCur) {
                     // 调度任务为当前任务； continue
                     INT32U timestamp = OSTimeGet();
-                    printf("%-10d\t%d\tContinue\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                    printf("[Time]%-10d\t%d\tContinue\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
                 }
                 else if (OSPrioHighRdy > OSPrioCur && OSPrioHighRdy<61) {
                     // 调度任务为新任务，但优先级低，则上个任务完成
                     INT32U timestamp = OSTimeGet();
-                    printf("%-10d\t%d\tNewTask\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
+                    printf("[Time]%-10d\t%d\tNewTask\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
 
 #if OS_TASK_PROFILE_EN > 0u
                     OSTCBHighRdy->OSTCBCtxSwCtr++;         /* Inc. # of context switches to this task  */
@@ -1055,12 +1055,6 @@ void  OSTimeTick (void)
 			if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) {
 				((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c--;
 
-                // 减1后等于0，说明刚刚完成任务
-                /*if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c == 0) {
-                    INT32U timestamp = OSTimeGet();
-                    printf("%-10d\t%d\tComplete\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);
-                }*/
-				//printf("\nTask %d work for 1 tick. Remained rest_c is %d.", OSTCBCur->OSTCBPrio, ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c);
 			}
             // 时间片运转完成，重置
             if (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->time_quanta_ctr == 0) {
@@ -1126,6 +1120,10 @@ void  OSTimeTick (void)
             }
 		}
 
+        if (OSTCBCur->OSTCBPrio == OS_TASK_IDLE_PRIO) { // 当前执行为空闲任务，计数
+            OSCPUFreeCtr++;
+        }
+
         int i = 0;
         // 遍历所有任务
         printf("time tick\n");
@@ -1133,7 +1131,16 @@ void  OSTimeTick (void)
             ptcb = OSTCBPrioTbl[i];
             while (ptcb != (OS_TCB*)0) {
                 //所有任务的rest_p都减一
-                ((tcb_ext_info*)ptcb->OSTCBExtPtr)->rest_p--;
+                tcb_ext_info* task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
+                task_info->rest_p--;
+
+                
+                //printf("============= rest_p %d =======， ptcb id is %d\n",task_info->rest_p, ptcb->OSTCBId);
+
+                if (task_info->rest_p == 0 && task_info->rest_c > 0) {
+                    OSTaskFailCtr++;
+                }
+                
 
                 if (ptcb->OSTCBDly != 0u) {                    /* No, Delayed or waiting for event with TO     */
                     ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
@@ -1161,7 +1168,10 @@ void  OSTimeTick (void)
                 OS_EXIT_CRITICAL();
             }
 
-        }  
+        }
+
+        INT32U timestamp = OSTimeGet();
+        printf("[OSCtxSwCtr]:%d\n[OSTaskSuccCtr]:%d\n[OSTaskFailCtr]:%d\n[OSCPUFreeCtr]:%d\n[TotalTime]:%d\n", OSCtxSwCtr, OSTaskSuccCtr, OSTaskFailCtr, OSCPUFreeCtr, timestamp);
     }
 }
 
