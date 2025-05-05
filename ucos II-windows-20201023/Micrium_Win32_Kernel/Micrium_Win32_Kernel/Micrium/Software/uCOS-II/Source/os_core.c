@@ -89,6 +89,7 @@ static  void  OS_SchedNew(void);
 
 static OS_TCB* Sched_RMS(OS_TCB* tcblist);
 static OS_TCB* Sched_EDF(OS_TCB* tcblist);
+static OS_TCB* Sched_FIFO(OS_TCB* tcblist);
 static void Sched_NEW();
 /*
 *********************************************************************************************************
@@ -1132,15 +1133,17 @@ void  OSTimeTick (void)
             while (ptcb != (OS_TCB*)0) {
                 //所有任务的rest_p都减一
                 tcb_ext_info* task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
-                task_info->rest_p--;
 
-                
-                //printf("============= rest_p %d =======， ptcb id is %d\n",task_info->rest_p, ptcb->OSTCBId);
-
-                if (task_info->rest_p == 0 && task_info->rest_c > 0) {
-                    OSTaskFailCtr++;
+                if (task_info->rest_p > 0) {
+                    task_info->rest_p--;
+                    // 周期任务需要重置剩余周期
+                    if (task_info->rest_p == 0) {
+                        if (task_info->t == 0) {
+                            task_info->rest_p = task_info->p;
+                        }
+                        OSTaskFailCtr++;
+                    }
                 }
-                
 
                 if (ptcb->OSTCBDly != 0u) {                    /* No, Delayed or waiting for event with TO     */
                     ptcb->OSTCBDly--;                          /* Decrement nbr of ticks to end of delay       */
@@ -2071,8 +2074,6 @@ OS_TCB* Sched_EDF(OS_TCB* tcblist) {
 OS_TCB* Sched_FIFO(OS_TCB* tcblist) {
     OS_TCB* ptcb;
     ptcb = tcblist;
-    INT32U min_ddl;
-    tcb_ext_info* task_info;
     OS_TCB* highRdy;
     highRdy = (OS_TCB*)0;
 

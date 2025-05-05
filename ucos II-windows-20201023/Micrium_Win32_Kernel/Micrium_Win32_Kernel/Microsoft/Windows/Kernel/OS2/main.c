@@ -63,7 +63,7 @@ tcb_ext_info task_info_array_nocycle[] = {
 };
 
 static int N = 20;
-static float P = 1.0;
+static float P = 1.5;
 
 
 /*
@@ -166,17 +166,17 @@ static  void  StartupTask (void *p_arg)
 
 void createTasks() {
 	int i;
-	for (i = 0;i < N/2;i++) {
+	for (i = 0;i < N*0;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
 
-		int num = Math_Rand()%20;	// 生成0-19的随机数
+		int num = Math_Rand()%20 + 1;	// 生成1-20的随机数
 
 		task_info_list->c = num;
 		task_info_list->p = N*num/P;
 
-		task_info_list->time_quanta = task_info_list->c;
+		task_info_list->time_quanta = 5;
 		task_info_list->t = 0;
 		task_info_list->pri = 0;
 		task_info_list->rest_c = task_info_list->c;
@@ -195,17 +195,17 @@ void createTasks() {
 	}
 
 
-	for (i = 0;i < N/2;i++) {
+	for (i = 0;i < N*1;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
-		int num = Math_Rand() % 20;	// 生成0-19的随机数
+		int num = Math_Rand() % 20 + 1;	// 生成1-20的随机数
 
 		task_info_list->c = num;
 		task_info_list->p = N * num / P;
 
-		task_info_list->time_quanta = task_info_list->c;
-		task_info_list->t = 0;
+		task_info_list->time_quanta = 5;
+		task_info_list->t = 1;
 		task_info_list->pri = 0;
 		task_info_list->rest_c = task_info_list->c;
 		task_info_list->rest_p = task_info_list->p;
@@ -214,11 +214,11 @@ void createTasks() {
 		OSTaskCreateExt(NoCycleTask,
 			(void*)0,
 			(OS_STK*)&TaskStk[TASK_STK_SIZE - 1],
-			4,
+			4  ,
 			i+10,
 			(OS_STK*)&TaskStk[0],
 			TASK_STK_SIZE,
-			(void*)&task_info_list,
+			(void*)task_info_list,
 			OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
 	}
 }
@@ -235,6 +235,7 @@ void CycleTask(void *pdata) {
 
 		if (task_info->rest_p >= 0) {
 			OSTaskSuccCtr++; // 任务成功
+			printf("cycle task task_info rest_p %d\n", task_info->rest_p);
 		}
 		
 		//重置任务完成时间
@@ -250,15 +251,19 @@ void CycleTask(void *pdata) {
 }
 
 void NoCycleTask(void *pdata) {
-	printf("NoCycleTask id %d start run\n", OSTCBCur->OSTCBId);
 	while (((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c > 0) //C ticks
 	{
 		// do nothing
 	}
+	OS_ENTER_CRITICAL();
 
 	tcb_ext_info* task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
+
+	//printf("task_info rest_p %d\n", task_info->rest_p);
+	
 	if (task_info->rest_p >= 0) {
 		OSTaskSuccCtr++; // 任务成功
+		printf("no cycle task task_info rest_p %d\n", task_info->rest_p);
 	}
 
 	INT32U timestamp = OSTimeGet();
@@ -266,4 +271,5 @@ void NoCycleTask(void *pdata) {
 
 	// 运行完成，删除该任务
 	OSTaskDel(OSTCBCur);
+	OS_EXIT_CRITICAL();
 }
