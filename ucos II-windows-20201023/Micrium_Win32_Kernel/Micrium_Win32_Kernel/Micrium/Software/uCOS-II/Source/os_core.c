@@ -1140,6 +1140,7 @@ void  OSTimeTick (void)
                     if (task_info->rest_p == 0) {
                         if (task_info->t == 0) {
                             task_info->rest_p = task_info->p;
+                            OSTaskTotalCtr++;
                         }
                         OSTaskFailCtr++;
                     }
@@ -1174,7 +1175,7 @@ void  OSTimeTick (void)
         }
 
         INT32U timestamp = OSTimeGet();
-        printf("[OSCtxSwCtr]:%d\n[OSTaskSuccCtr]:%d\n[OSTaskFailCtr]:%d\n[OSCPUFreeCtr]:%d\n[TotalTime]:%d\n", OSCtxSwCtr, OSTaskSuccCtr, OSTaskFailCtr, OSCPUFreeCtr, timestamp);
+        printf("[OSCtxSwCtr]:%d\n[OSTaskTotalCtr]:%d\n[OSTaskFailCtr]:%d\n[OSCPUFreeCtr]:%d\n[TotalTime]:%d\n", OSCtxSwCtr, OSTaskTotalCtr, OSTaskFailCtr, OSCPUFreeCtr, timestamp);
     }
 }
 

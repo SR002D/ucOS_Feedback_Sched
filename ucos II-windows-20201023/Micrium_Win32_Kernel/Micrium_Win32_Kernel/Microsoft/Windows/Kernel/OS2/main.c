@@ -62,8 +62,8 @@ tcb_ext_info task_info_array_nocycle[] = {
 	{1, 0, 4, 8, 4, 8, 18, 18}     // 非周期任务20：运行时间4，截止日期8
 };
 
-static int N = 20;
-static float P = 1.5;
+static int N = 40;
+static float P = 0.5;
 
 
 /*
@@ -166,7 +166,7 @@ static  void  StartupTask (void *p_arg)
 
 void createTasks() {
 	int i;
-	for (i = 0;i < N*0;i++) {
+	for (i = 0;i < N/4;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
@@ -192,10 +192,12 @@ void createTasks() {
 			TASK_STK_SIZE,
 			(void*)task_info_list,
 			OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+
+		OSTaskTotalCtr++;
 	}
 
 
-	for (i = 0;i < N*1;i++) {
+	for (i = 0;i < N*3/4;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
@@ -220,6 +222,8 @@ void createTasks() {
 			TASK_STK_SIZE,
 			(void*)task_info_list,
 			OS_TASK_OPT_STK_CHK | OS_TASK_OPT_STK_CLR);
+
+		OSTaskTotalCtr++;
 	}
 }
 
@@ -232,11 +236,6 @@ void CycleTask(void *pdata) {
 		}
 		OS_ENTER_CRITICAL();
 		tcb_ext_info *task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
-
-		if (task_info->rest_p >= 0) {
-			OSTaskSuccCtr++; // 任务成功
-			printf("cycle task task_info rest_p %d\n", task_info->rest_p);
-		}
 		
 		//重置任务完成时间
 		((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->rest_c = ((tcb_ext_info*)OSTCBCur->OSTCBExtPtr)->c;
@@ -260,11 +259,6 @@ void NoCycleTask(void *pdata) {
 	tcb_ext_info* task_info = (tcb_ext_info*)OSTCBCur->OSTCBExtPtr;
 
 	//printf("task_info rest_p %d\n", task_info->rest_p);
-	
-	if (task_info->rest_p >= 0) {
-		OSTaskSuccCtr++; // 任务成功
-		printf("no cycle task task_info rest_p %d\n", task_info->rest_p);
-	}
 
 	INT32U timestamp = OSTimeGet();
 	printf("[Time]%-10d\t%d\tComplete and Del\t%d\t%d\n", timestamp, OSTCBCur->OSTCBId, timestamp - 1, timestamp);

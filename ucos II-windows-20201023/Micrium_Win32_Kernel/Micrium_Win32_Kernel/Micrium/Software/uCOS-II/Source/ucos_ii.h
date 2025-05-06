@@ -706,7 +706,7 @@ typedef  void                      (*OS_TLS_DESTRUCT_PTR)(OS_TCB    *ptcb,
 */
 
 OS_EXT  INT32U            OSCtxSwCtr;               /* Counter of number of context switches           */
-OS_EXT  INT32U            OSTaskSuccCtr;    // 任务成功个数
+OS_EXT  INT32U            OSTaskTotalCtr;    // 任务总数个数
 OS_EXT  INT32U            OSTaskFailCtr;    // 任务失败个数
 OS_EXT  INT32U            OSCPUFreeCtr;     // cpu空闲时钟数
 
