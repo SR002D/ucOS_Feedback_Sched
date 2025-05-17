@@ -62,8 +62,8 @@ tcb_ext_info task_info_array_nocycle[] = {
 	{1, 0, 4, 8, 4, 8, 18, 18}     // 非周期任务20：运行时间4，截止日期8
 };
 
-static int N = 40;
-static float P = 0.5;
+static int N = 20;
+static float P = 1.5;
 
 
 /*
@@ -166,7 +166,7 @@ static  void  StartupTask (void *p_arg)
 
 void createTasks() {
 	int i;
-	for (i = 0;i < N/4;i++) {
+	for (i = 0;i < N*0;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
@@ -197,7 +197,7 @@ void createTasks() {
 	}
 
 
-	for (i = 0;i < N*3/4;i++) {
+	for (i = 0;i < N;i++) {
 		OS_STK* TaskStk = (OS_STK*)malloc(TASK_STK_SIZE * sizeof(OS_STK));
 		tcb_ext_info* task_info_list = (tcb_ext_info*)malloc(sizeof(tcb_ext_info));
 
