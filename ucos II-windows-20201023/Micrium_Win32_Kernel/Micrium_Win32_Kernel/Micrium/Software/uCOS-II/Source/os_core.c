@@ -1967,15 +1967,12 @@ void Sched_NEW() {
     ptcb = (OS_TCB*)0;
 
     //初始化默认为空闲任务
-    OS_ENTER_CRITICAL();
     i = 0;//优先级最高
-    OS_EXIT_CRITICAL();
 
-    // 可以调度到空闲任务
+    // 可以调度到空闲任务(优先级62、63)
     for (i = 0;i <= OS_LOWEST_PRIO;i++) {
         // 按一级优先级顺序查找TCB
         if (OSTCBPrioTbl[i] != (OS_TCB*)0) {
-            // 在二级优先级里找到优先级最高的
             // 周期任务
             if (i % 2 == 0) {
                 ptcb = Sched_RMS(OSTCBPrioTbl[i]);
@@ -2020,7 +2017,6 @@ OS_TCB* Sched_RMS(OS_TCB* tcblist) {
 	while (ptcb != (OS_TCB*)0) {  
 		
 		//如果这个任务是就绪态的，且任务状态不是running，避免二次调度到正在运行中的任务
-        //task = (OS_TASK_STK*)ptcb->OSTCBStkPtr;
 		if (ptcb->OSTCBDly == 0 ) {
 			task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
 			INT32U task_p = task_info->p;
@@ -2045,10 +2041,8 @@ OS_TCB* Sched_EDF(OS_TCB* tcblist) {
     OS_TCB* highRdy;
     highRdy = (OS_TCB*)0;
 
-    //task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
-
 	//初始化默认为空闲任务
-	OS_ENTER_CRITICAL();
+	OS_ENTER_CRITICAL(); 
 	min_ddl = 4294967295;//MAX
 
 	//开始遍历所有的TCB
@@ -2077,10 +2071,6 @@ OS_TCB* Sched_FIFO(OS_TCB* tcblist) {
     ptcb = tcblist;
     OS_TCB* highRdy;
     highRdy = (OS_TCB*)0;
-
-    //初始化默认为空闲任务
-    OS_ENTER_CRITICAL();
-    OS_EXIT_CRITICAL();
 
     //开始遍历所有的TCB
     while (ptcb != (OS_TCB*)0) {  //注意，除了63任务外，还有62、61任务
@@ -2458,7 +2448,6 @@ static void TaskAdd(OS_TCB* ptcb) {
 
     task_info = (tcb_ext_info*)ptcb->OSTCBExtPtr;
 
-    // 测试
     if (task_info == (tcb_ext_info*)0) {
         return;
     }
